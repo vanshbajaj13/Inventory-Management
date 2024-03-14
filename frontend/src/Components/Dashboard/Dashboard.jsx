@@ -52,6 +52,9 @@ const Dashboard = () => {
     const last30DaysSales = salesData?.filter(
       (sale) => new Date(sale.soldAt) > startDate
     );
+    const last30Expense = expensesData?.filter(
+      (expense) => new Date(expense.date) > startDate
+    );
 
     const dailySum = last30DaysSales?.reduce((acc, sale) => {
       const saleDate = new Date(sale.soldAt).toLocaleDateString();
@@ -105,7 +108,7 @@ const Dashboard = () => {
     setTotalProfit(totalProfits);
 
     // Fetch total expenses for the selected days
-    const totalExpensesAmount = expensesData?.reduce(
+    const totalExpensesAmount = last30Expense?.reduce(
       (sum, expense) => sum + expense.expenseAmount,
       0
     );
@@ -124,7 +127,7 @@ const Dashboard = () => {
               }`,
             },
           }),
-          fetch("/api/expenselog/totalexpense", {
+          fetch("/api/expenselog", {
             headers: {
               Authorization: `Bearer ${
                 JSON.parse(window.localStorage.getItem("userInfo")).token
@@ -222,7 +225,7 @@ const Dashboard = () => {
           onChange={handleDaysChange}
           className="border p-2 rounded-md"
         >
-          {[1, 3, 5, 7, 15, 30].map((days) => (
+          {[1, 3, 5, 7, 15, 30, 180, 365].map((days) => (
             <option key={days} value={days}>
               {`${days} Day${days > 1 ? "s" : ""}`}
             </option>
