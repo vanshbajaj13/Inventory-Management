@@ -7,13 +7,14 @@ const Dashboard = () => {
   const naviagate = useNavigate();
   const [salesData, setSalesData] = useState();
   const [expensesData, setExpensesData] = useState();
-  const [selectedDays, setSelectedDays] = useState(30);
+  const [selectedDays, setSelectedDays] = useState(180);
   const [dailySalesSum, setDailySalesSum] = useState({});
   const [totalSales, setTotalSales] = useState(0);
   const [productsSold, setProductsSold] = useState({});
   const [profitData, setProfitData] = useState({});
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [totalProfit, setTotalProfit] = useState(0);
+  const [isCalculating, setIsCalculating] = useState(false);
 
   // auto navigate to login
   useEffect(() => {
@@ -48,15 +49,16 @@ const Dashboard = () => {
     // Calculate daily sales sum for the selected days
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - selectedDays);
+    startDate.setHours(0, 0, 0, 0); // Set time to midnight
 
-    const last30DaysSales = salesData?.filter(
-      (sale) => new Date(sale.soldAt) > startDate
+    const lastSelectedDaysSales = salesData?.filter(
+      (sale) => new Date(sale.soldAt).setHours(0, 0, 0, 0) > startDate
     );
-    const last30Expense = expensesData?.filter(
-      (expense) => new Date(expense.date) > startDate
+    const lastSelectedDaysExpense = expensesData?.filter(
+      (expense) => new Date(expense.date).setHours(0, 0, 0, 0) > startDate
     );
 
-    const dailySum = last30DaysSales?.reduce((acc, sale) => {
+    const dailySum = lastSelectedDaysSales?.reduce((acc, sale) => {
       const saleDate = new Date(sale.soldAt).toLocaleDateString();
       acc[saleDate] = (acc[saleDate] || 0) + sale.sellingPrice;
       return acc;
@@ -65,14 +67,14 @@ const Dashboard = () => {
     setDailySalesSum(dailySum || {});
 
     // Calculate total sales for the selected days
-    const total = last30DaysSales?.reduce(
+    const total = lastSelectedDaysSales?.reduce(
       (sum, sale) => sum + sale.sellingPrice,
       0
     );
     setTotalSales(total || 0);
 
     // Calculate products sold
-    const productsSoldCount = last30DaysSales?.reduce((acc, sale) => {
+    const productsSoldCount = lastSelectedDaysSales?.reduce((acc, sale) => {
       const product = sale.product;
       acc[product] = (acc[product] || 0) + 1;
       return acc;
@@ -81,7 +83,7 @@ const Dashboard = () => {
     setProductsSold(productsSoldCount || {});
 
     // Calculate profits for each brand
-    const profits = last30DaysSales?.reduce((acc, sale) => {
+    const profits = lastSelectedDaysSales?.reduce((acc, sale) => {
       const saleDate = new Date(sale.soldAt).toLocaleDateString();
       const brand = sale.brand;
       const profit = sale.sellingPrice - sale.mrp;
@@ -108,16 +110,18 @@ const Dashboard = () => {
     setTotalProfit(totalProfits);
 
     // Fetch total expenses for the selected days
-    const totalExpensesAmount = last30Expense?.reduce(
+    const totalExpensesAmount = lastSelectedDaysExpense?.reduce(
       (sum, expense) => sum + expense.expenseAmount,
       0
     );
     setTotalExpenses(totalExpensesAmount || 0);
+    setIsCalculating(false);
   };
 
   // Fetch sales and expenses data from the server
   const fetchSalesAndExpensesData = async () => {
     if (window.localStorage.getItem("userInfo")) {
+      setIsCalculating(true);
       try {
         const [salesResponse, expensesResponse] = await Promise.all([
           fetch("/api/saleslog", {
@@ -127,7 +131,7 @@ const Dashboard = () => {
               }`,
             },
           }),
-          fetch("/api/expenselog", {
+          fetch("/api/expenselog/totalexpense", {
             headers: {
               Authorization: `Bearer ${
                 JSON.parse(window.localStorage.getItem("userInfo")).token
@@ -225,7 +229,7 @@ const Dashboard = () => {
           onChange={handleDaysChange}
           className="border p-2 rounded-md"
         >
-          {[1, 3, 5, 7, 15, 30, 180, 365].map((days) => (
+          {[1, 2, 3, 4, 5, 6, 7, 15, 30, 180, 365].map((days) => (
             <option key={days} value={days}>
               {`${days} Day${days > 1 ? "s" : ""}`}
             </option>
@@ -237,35 +241,49 @@ const Dashboard = () => {
         <h3 className="text-lg font-semibold mb-2">
           Total Sales in {selectedDays} days:
         </h3>
-        <div className="text-xl font-bold">₹{totalSales}</div>
+        <div className="text-xl font-bold">
+          ₹
+          {isCalculating
+            ? " Calculating....."
+            : totalSales.toLocaleString("hi")}
+        </div>
       </div>
       <div className="mb-8">
         <h3 className="text-lg font-semibold mb-2">
           Total Profit in {selectedDays} days:
         </h3>
-        <div className="text-xl font-bold">₹{totalProfit}</div>
+        <div className="text-xl font-bold">
+          ₹
+          {isCalculating
+            ? " Calculating....."
+            : totalProfit.toLocaleString("hi")}
+        </div>
       </div>
 
       <div>
         <h3 className="text-lg font-semibold mb-2">
           Total Expenses in {selectedDays} days:
         </h3>
-        <div className="text-xl font-bold">₹{totalExpenses}</div>
+        <div className="text-xl font-bold">
+          ₹
+          {isCalculating
+            ? " Calculating....."
+            : totalExpenses.toLocaleString("hi")}
+        </div>
       </div>
 
       <div className="mb-8">
         <h3 className="text-lg font-semibold mb-2">Sales Over Time</h3>
         <Line data={lineChartData} height={150} />
       </div>
-
-      <div className="mb-8">
+      <div className="mb-8 w-full h-screen">
         <h3 className="text-lg font-semibold mb-2">Products Sold</h3>
-        <Bar data={barChartData} />
+        <Bar data={barChartData} options={{ maintainAspectRatio: false }} />
       </div>
 
-      <div className="mb-8">
+      <div className="mb-8 w-full h-screen">
         <h3 className="text-lg font-semibold mb-2">Profits by Brand</h3>
-        <Line data={profitLineData} height={150} />
+        <Line data={profitLineData} options={{ maintainAspectRatio: false }} />
       </div>
     </div>
   );

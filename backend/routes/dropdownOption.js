@@ -21,6 +21,8 @@ router.get("/brands", protect, async (req, res) => {
 router.post("/brands", protect, async (req, res) => {
   var { brand } = req.body;
   brand = brand.toUpperCase();
+  // Remove trailing spaces from brand
+  brand = brand.trim();
   try {
     const newBrand = new Product({ brand: brand, products: [] });
     await Product.create(newBrand)
@@ -52,9 +54,11 @@ router.get("/products", protect, async (req, res) => {
 router.put("/products", protect, async (req, res) => {
   var { brand, products } = req.body;
   // Convert each value in the product array to lowercase
-  products = products.map((productItem) => productItem.toLowerCase());
+  products = products.map((productItem) => productItem.toLowerCase().trim());
   // Convert brand to uppercase
-  brand = brand.toUpperCase();
+  brand = brand.toUpperCase().trim();
+  // Remove trailing spaces from brand
+  brand = brand.trim();
 
   try {
     options = { upsert: true, new: true };

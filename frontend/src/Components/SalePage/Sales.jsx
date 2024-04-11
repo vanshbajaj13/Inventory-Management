@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import QrScanner from "react-qr-scanner";
 
 const Sale = () => {
   const naviagate = useNavigate();
@@ -8,6 +9,7 @@ const Sale = () => {
     code: "",
     sellingPrice: "",
     quantitySold: 1,
+    customerPhoneNo: "",
   });
 
   const [buttonActive, setButtonActive] = useState(false);
@@ -15,6 +17,9 @@ const Sale = () => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [availableQuantity, setAvailableQuantity] = useState(0);
   const [fetchingQuantity, setFetchingQuantity] = useState(false);
+  const [qrCodeScanned, setQrCodeScanned] = useState("");
+  const [showScanner, setShowScanner] = useState(false);
+  const [showInvalidPhoneTooltip, setShowInvalidPhoneTooltip] = useState(false);
 
   useEffect(() => {
     function isUserLoggedIn() {
@@ -25,7 +30,19 @@ const Sale = () => {
     isUserLoggedIn();
   }, [naviagate]);
 
-  // Fetch available quantity when brand, product, category, mrp, or size changes
+  useEffect(() => {
+    if (
+      availableQuantity > 0 &&
+      productDetails.sellingPrice !== "" &&
+      parseFloat(productDetails.sellingPrice) > 0
+    ) {
+      setButtonActive(true);
+    } else {
+      setButtonActive(false);
+    }
+  }, [availableQuantity, productDetails.sellingPrice]);
+
+  // Fetch available quantity
   const fetchAvailableQuantity = async () => {
     try {
       if (productDetails.code) {
@@ -43,9 +60,6 @@ const Sale = () => {
         if (response.ok) {
           var { availableQuantity } = await response.json();
           setAvailableQuantity(availableQuantity);
-          if (availableQuantity > 0) {
-            setButtonActive(true);
-          }
         } else {
           setButtonActive(false);
           setAvailableQuantity(0);
@@ -77,10 +91,42 @@ const Sale = () => {
       return;
     }
 
+    // Validate phone number
+    if (name === "customerPhoneNo") {
+      if (!/^\d*$/.test(value)) {
+        // If the entered value contains non-numeric characters, prevent it
+        return;
+      }
+      if (value.length === 10 || value.length === 0) {
+        setShowInvalidPhoneTooltip(false); // Hide tooltip if phone number is valid
+      } else {
+        setShowInvalidPhoneTooltip(true); // Show tooltip for invalid phone number
+      }
+    }
+
     setProductDetails((prevDetails) => ({
       ...prevDetails,
       [name]: value.toUpperCase(),
     }));
+  };
+
+  // Handle QR code scan
+  const handleScan = (data) => {
+    // Check if the scanned code matches the specified format (3 uppercase letters followed by 4 numbers)
+    const regex = /^[A-Z]{3}\d{4}$/;
+    if (data && regex.test(data.text)) {
+      setProductDetails((prevDetails) => ({
+        ...prevDetails,
+        code: data.text,
+      }));
+      setQrCodeScanned(data.text);
+      setShowScanner(false);
+    }
+  };
+
+  // Handle error during QR code scan
+  const handleError = (error) => {
+    console.error("Error while scanning QR code:", error);
   };
 
   const handleSale = async () => {
@@ -104,6 +150,7 @@ const Sale = () => {
           code: "",
           sellingPrice: "",
           quantitySold: 1,
+          customerPhoneNo: "",
         });
         console.log("Product sold from inventory successfully!");
         setShowTooltip(true);
@@ -142,8 +189,12 @@ const Sale = () => {
           onChange={handleInputChange}
           className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
         ></input>
-      </div>
-      <div className="mb-4">
+        <p className="mb-4 text-green-500">
+          {/* Update with your available quantity logic */}
+          Available Quantity:{" "}
+          {fetchingQuantity ? "Fetching Quantity..." : availableQuantity}
+        </p>
+        <div className="mb-4">
         <label
           htmlFor="sellingPrice"
           className="block text-sm font-medium text-gray-700"
@@ -159,12 +210,62 @@ const Sale = () => {
           className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
         />
       </div>
+        <div className="mb-4">
+          <label
+            htmlFor="customerPhoneNo"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Customer Phone No.
+          </label>
+          <input
+            name="customerPhoneNo"
+            type="tel"
+            placeholder="Customer's phone number"
+            value={productDetails.customerPhoneNo}
+            onChange={handleInputChange}
+            className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+          />
+        </div>
+        {showInvalidPhoneTooltip && (
+          <div className="mt-2 p-2 bg-red-400 text-white font-bold text-center rounded-md">
+            Invalid phone number
+          </div>
+        )}
+      </div>
+      <div className="flex justify-center">
+        <button
+          onClick={() => {
+            setQrCodeScanned("");
+            setProductDetails((prevDetails) => ({
+              ...prevDetails,
+              code: "",
+            }));
+          }}
+          className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded m-1"
+        >
+          Reset QR Code
+        </button>
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded m-1"
+          onClick={() => setShowScanner(!showScanner)}
+        >
+          Toggle Scanner
+        </button>
+      </div>
+      {showScanner && (
+        <QrScanner
+          onScan={handleScan}
+          onError={handleError}
+          constraints={{
+            audio: false,
+            video: { facingMode: "environment" },
+          }}
+          style={{ width: "100%" }}
+        />
+      )}
 
-      <p className="mb-4 text-green-500">
-        {/* Update with your available quantity logic */}
-        Available Quantity:{" "}
-        {fetchingQuantity ? "Fetching Quantity..." : availableQuantity}
-      </p>
+      {qrCodeScanned && <p>QR Code Scanned: {qrCodeScanned}</p>}
+      
 
       {showTooltip && (
         <>

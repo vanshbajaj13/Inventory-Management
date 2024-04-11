@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const saleLogSchema = new mongoose.Schema(
+const RecentlyDeletedSaleLogSchema = new mongoose.Schema(
   { 
     code:{
       type: String,
@@ -38,5 +38,5 @@ const saleLogSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const SaleLog = new mongoose.model("SaleLog", saleLogSchema);
-module.exports = { SaleLog };
+const RecentlyDeletedSaleLog = new mongoose.model("RecentlyDeletedSaleLog", RecentlyDeletedSaleLogSchema);
+module.exports = { RecentlyDeletedSaleLog };

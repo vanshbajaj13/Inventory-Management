@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const itemSchema = new mongoose.Schema(
+const recentlyDeletedItemSchema = new mongoose.Schema(
   {
     code: {
       type: String,
@@ -42,5 +42,5 @@ const itemSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const Item = new mongoose.model("Item", itemSchema);
-module.exports = { Item };
+const RecentlyDeletedItem = new mongoose.model("RecentlyDeletedItem", recentlyDeletedItemSchema);
+module.exports = { RecentlyDeletedItem };
